@@ -1,0 +1,79 @@
+# Pipeline configuration. Paths are relative to `base_dir`, which is relative to this file.
+base_dir: ..
+output_dir: outputs
+run_name: v1
+seed: 42
+
+target: fixing_time
+
+# Per-project scopes. The aggregated scope pools all projects into one dataset.
+projects: [Eclipse, Novell, Mozilla, OpenOffice, KDE, OpenXchange, W3C]
+aggregated: true
+id_column:
+  project: bug_id
+  aggregated: row_uid
+project_column: project
+# Columns that are never used as features (ids and metadata).
+drop_columns: [bug_id, source_row, project, row_uid]
+
+# One entry per dataset D0..D6. `{project}` is replaced with the project name.
+# V2 datasets (D0..D5) will be added here when available, see docs/TODO_dataset_V2.md.
+datasets:
+  D6:
+    project_path: "datasets/V1.0_no time/progetti separati/features{project}.csv"
+    aggregated_path: "datasets/V1.0_no time/progetti aggregati/dataset_aggregato.csv"
+
+# Percentiles of the target used as fast/slow threshold θ (computed on training data only).
+thresholds: [50, 75, 90]
+
+split:
+  holdout_size: 0.2
+  n_folds: 5
+  n_bins: 10   # quantile bins of the target used for stratification
+
+# Number of parallel work units (joblib). Models run single-threaded inside each unit.
+n_jobs: -1
+
+models:
+  regression:
+    dummy: {strategy: median}
+    ridge: {alpha: 1.0}
+    random_forest:
+      n_estimators: 200
+      min_samples_leaf: 10
+      max_features: sqrt
+    xgboost:
+      n_estimators: 500
+      learning_rate: 0.05
+      max_depth: 6
+      subsample: 0.8
+      colsample_bytree: 0.8
+      tree_method: hist
+    lightgbm:
+      n_estimators: 500
+      learning_rate: 0.05
+      num_leaves: 31
+      subsample: 0.8
+      subsample_freq: 1
+      colsample_bytree: 0.8
+  classification:
+    dummy: {strategy: prior}
+    logreg: {C: 1.0, max_iter: 5000}
+    random_forest:
+      n_estimators: 200
+      min_samples_leaf: 10
+      max_features: sqrt
+    xgboost:
+      n_estimators: 500
+      learning_rate: 0.05
+      max_depth: 6
+      subsample: 0.8
+      colsample_bytree: 0.8
+      tree_method: hist
+    lightgbm:
+      n_estimators: 500
+      learning_rate: 0.05
+      num_leaves: 31
+      subsample: 0.8
+      subsample_freq: 1
+      colsample_bytree: 0.8
