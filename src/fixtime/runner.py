@@ -224,6 +224,10 @@ def write_manifest(cfg: Config, argv: list[str]) -> Path:
     return path
 
 
+def _print_flush(msg: str) -> None:
+    print(msg, flush=True)
+
+
 def run(
     cfg: Config,
     scopes=None,
@@ -233,7 +237,7 @@ def run(
     models=None,
     force: bool = False,
     limit: int | None = None,
-    log=print,
+    log=_print_flush,
 ) -> list[tuple[Unit, str]]:
     """Run all pending units. Returns the failed units with their tracebacks."""
     failures = []
