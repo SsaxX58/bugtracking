@@ -23,7 +23,7 @@ from sklearn.metrics import (
 def regression_metrics(y_true, y_pred) -> dict[str, float]:
     """Metrics in days, plus MAE/RMSE in log1p space where the model is trained."""
     y_true = np.asarray(y_true, dtype=float)
-    y_pred = np.clip(np.asarray(y_pred, dtype=float), 0, None)
+    y_pred = np.asarray(y_pred, dtype=float)
     lt, lp = np.log1p(y_true), np.log1p(y_pred)
     return {
         "mae": mean_absolute_error(y_true, y_pred),

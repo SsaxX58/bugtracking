@@ -35,6 +35,8 @@ REGRESSION = "regression"
 CLASSIFICATION = "classification"
 TASKS = (REGRESSION, CLASSIFICATION)
 STAGES = ("cv", HOLDOUT)
+# Bump when a code change alters results, so that cached units are recomputed.
+PIPELINE_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -92,6 +94,7 @@ def enumerate_units(
 def unit_hash(cfg: Config, unit: Unit, ds: Dataset, split: Split) -> str:
     """Everything that, if changed, must invalidate the saved result."""
     payload = {
+        "version": PIPELINE_VERSION,
         "unit": asdict(unit),
         "params": cfg.models[unit.task][unit.model],
         "seed": cfg.seed,
@@ -147,7 +150,10 @@ def execute_unit(
             model = build_regressor(unit.model, params, seed)
             model.fit(X_train, y_train)
             info["fit_seconds"] = time.perf_counter() - start
-            pred = model.predict(X_test)
+            # linear models can extrapolate far outside the target range in log space,
+            # and expm1 turns that into absurd values: clip to the training range
+            pred = np.clip(model.predict(X_test), 0, y_train.max())
+            info["pred_clip_max"] = float(y_train.max())
             metrics = regression_metrics(y_test, pred)
             predictions = pd.DataFrame({"id": ids[test_pos], "y_true": y_test, "y_pred": pred})
         else:
