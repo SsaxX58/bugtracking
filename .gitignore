@@ -1,0 +1,15 @@
+# data and generated artifacts
+datasets/
+outputs/
+# local working notes (decisions, TODO)
+docs/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/

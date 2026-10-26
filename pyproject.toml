@@ -1,0 +1,36 @@
+[project]
+name = "fixtime"
+version = "0.1.0"
+description = "Regression and fast/slow classification pipeline for bug fixing time"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "joblib>=1.4",
+    "lightgbm>=4.5",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "pyyaml>=6.0",
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+]
+
+[project.scripts]
+fixtime = "fixtime.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fixtime"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
