@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 import pandas as pd
@@ -26,7 +26,7 @@ class Dataset:
         return list(self.X.columns)
 
 
-@lru_cache(maxsize=None)
+@cache
 def file_sha256(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
