@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=2.0",
     "pandas>=2.2",
     "pyarrow>=17",
+    "pydantic>=2.9",
     "pyyaml>=6.0",
     "scikit-learn>=1.5",
     "xgboost>=2.1",
@@ -19,7 +20,12 @@ dependencies = [
 fixtime = "fixtime.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "mypy>=2.4.1",
+    "pandas-stubs>=3.1.0.261029",
+    "pytest>=8",
+    "ruff>=0.6",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,3 +40,13 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+ignore_missing_imports = true  # sklearn, lightgbm and joblib ship no type stubs
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false

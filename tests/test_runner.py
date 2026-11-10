@@ -57,7 +57,7 @@ def test_caching_and_partial_rerun(synthetic_cfg):
     (synthetic_cfg.run_dir / "cv" / "A" / "T0" / "regression" / "ridge" / "fold2.json").unlink()
     assert "1 to run" in _run(synthetic_cfg, **kw)[0]
 
-    synthetic_cfg.models["regression"]["ridge"]["alpha"] = 10.0
+    synthetic_cfg.models.regression.ridge.alpha = 10.0
     assert "5 to run" in _run(synthetic_cfg, **kw)[0]
 
 

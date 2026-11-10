@@ -32,7 +32,7 @@ def test_train_test_are_disjoint(synthetic_cfg):
 
 def test_split_is_reproducible(synthetic_cfg):
     ds = load_dataset(synthetic_cfg, "A", "T0")
-    assert make_split(synthetic_cfg, ds).to_json() == make_split(synthetic_cfg, ds).to_json()
+    assert make_split(synthetic_cfg, ds) == make_split(synthetic_cfg, ds)
 
 
 def test_aggregated_split_is_stratified_by_project(synthetic_cfg):
@@ -47,7 +47,7 @@ def test_saved_split_is_reused_and_checked(synthetic_cfg):
     ds = load_dataset(synthetic_cfg, "A", "T0")
     first = load_or_create_split(synthetic_cfg, ds)
     assert split_path(synthetic_cfg, "A").exists()
-    assert load_or_create_split(synthetic_cfg, ds).to_json() == first.to_json()
+    assert load_or_create_split(synthetic_cfg, ds) == first
 
     data = json.loads(split_path(synthetic_cfg, "A").read_text())
     data["ids_hash"] = "changed"

@@ -3,23 +3,35 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
 
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from fixtime.config import AGGREGATED, Config
 
 
-@dataclass
-class Dataset:
+class Dataset(BaseModel):
+    """Features, target and ids of one (scope, dataset), all indexed by bug id."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
     scope: str
     name: str
-    X: pd.DataFrame  # indexed by id
-    y: pd.Series  # indexed by id
+    X: pd.DataFrame
+    y: pd.Series
     project: pd.Series | None  # project of each row, only for the aggregated scope
     file_hash: str
+
+    @model_validator(mode="after")
+    def _aligned(self) -> Dataset:
+        if not self.X.index.equals(self.y.index):
+            raise ValueError(f"{self.scope}/{self.name}: features and target ids differ")
+        if not self.X.index.is_unique:
+            raise ValueError(f"{self.scope}/{self.name}: duplicated ids")
+        return self
 
     @property
     def feature_names(self) -> list[str]:
@@ -59,7 +71,11 @@ def _read_table(cfg: Config, scope: str, dataset: str) -> tuple[pd.DataFrame, st
 
 
 def load_dataset(
-    cfg: Config, scope: str, dataset: str, limit: int | None = None, keep_ids=None
+    cfg: Config,
+    scope: str,
+    dataset: str,
+    limit: int | None = None,
+    keep_ids: Iterable[int | str] | None = None,
 ) -> Dataset:
     """Load features, target and ids. `limit` subsamples rows; `keep_ids` keeps only those ids."""
     df, source, file_hash = _read_table(cfg, scope, dataset)
