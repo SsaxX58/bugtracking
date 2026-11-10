@@ -2,7 +2,8 @@
 
 Pipeline per stimare il tempo di fix dei bug (`fixing_time`) a partire da feature tabulari.
 Per ogni scope (singolo progetto oppure tutti i progetti aggregati) e per ogni dataset
-(D0 = solo feature statiche, ..., D6 = tutte le feature) esegue:
+(uno snapshot del bug nel tempo: `T0` = solo feature statiche, `T1C`, `T24`, `T72`, `T7D`,
+`FULL` = tutta la storia) esegue:
 
 1. **Regressione** di `fixing_time` con diversi regressori.
 2. **Classificazione fast/slow** per tre soglie θ (50°, 75° e 90° percentile di `fixing_time`),
@@ -27,7 +28,8 @@ I CSV non sono nel repository: vanno messi in `datasets/` con i path indicati in
 
 ```bash
 uv run fixtime run                                   # tutto: ogni scope, dataset, stage e task
-uv run fixtime run --scope W3C --dataset D6          # sottoinsieme
+uv run fixtime run --scope W3C --dataset T24         # sottoinsieme
+uv run fixtime run --config configs/v1.yaml          # vecchio dataset V1 (run v1)
 uv run fixtime run --stage holdout --model lightgbm  # solo una fase / un modello
 uv run fixtime run --limit 500                       # smoke test su un sottocampione (run separato)
 uv run fixtime report                                # tabelle CSV in outputs/<run>/results/
@@ -44,10 +46,11 @@ il file `.json`.
 
 - **Split**: 80/20 stratificato su 10 bin di quantile di `fixing_time` (nell'aggregato anche
   per progetto), poi 5-fold StratifiedKFold sull'80%. Lo split viene calcolato una volta per
-  scope e riusato da tutti i dataset D0..D6, così i dataset si confrontano sugli stessi bug.
-  Seed 42.
+  scope sul dataset `split_reference` (`T0`, che contiene tutti i bug) e riusato dagli altri
+  snapshot, che contengono solo i bug ancora aperti in quel momento: ogni bug sta nello stesso
+  fold in tutti i dataset. Seed 42.
 - **Soglia θ**: percentile di `fixing_time` calcolato solo sui dati di training (di ogni fold,
-  o dell'80% per l'holdout). L'etichetta è `slow = 1` se `fixing_time >= θ`, altrimenti `fast = 0`.
+  o dell'80% per l'holdout) del dataset in uso. L'etichetta è `slow = 1` se `fixing_time >= θ`, altrimenti `fast = 0`.
 - **Regressione**: i modelli imparano `log1p(fixing_time)`. Le predizioni vengono riportate in
   giorni con `expm1` e tagliate all'intervallo `[0, max(y_train)]`.
 - **Bilanciamento**: `class_weight="balanced"` (XGBoost: `scale_pos_weight = n_fast / n_slow`).
@@ -80,16 +83,20 @@ Basta aggiungere una voce sotto `datasets:` in `configs/default.yaml`:
 
 ```yaml
 datasets:
-  D0:
-    project_path: "datasets/.../D0_{project}.csv"
-    aggregated_path: "datasets/.../D0_aggregato.csv"
+  T14D:
+    project_path: "datasets/.../{project}/{project}_T14D.csv"
+    aggregated_path: "datasets/.../T14D_aggregato.csv"   # facoltativo
 ```
 
-Tutti i dataset di uno scope devono contenere gli stessi id. Se non è così, la pipeline si
-ferma con un errore.
+Senza `aggregated_path` l'aggregato viene costruito unendo i file dei progetti, con id
+`Progetto:bug_id`. Ogni bug di un dataset deve esistere nel dataset `split_reference`; se non
+è così, la pipeline si ferma con un errore. Le colonne che non devono diventare feature
+(id, varianti del target, testo) vanno elencate in `drop_columns`.
 
 ## Dati
 
-V1.0 (`datasets/V1.0_no time`): 7 progetti (Eclipse, Novell, Mozilla, OpenOffice, KDE,
-OpenXchange, W3C) più l'aggregato, 45 feature. Per ora viene usato come D6. Il dataset V2.0,
-con le versioni temporali D0..D5, è in preparazione.
+- **V2** (`datasets/V2.0_time_Gabriele/Progetti separati/`, config `configs/default.yaml`,
+  run `v2`): 7 progetti × 6 snapshot. Feature: T0 28, T1C 32, T24/T72/T7D 38, FULL 45.
+  L'aggregato non è fornito e viene costruito dal codice.
+- **V1** (`datasets/V1.0_no time`, config `configs/v1.yaml`, run `v1`): un solo dataset con
+  tutte le feature (equivalente a FULL) più l'aggregato.
