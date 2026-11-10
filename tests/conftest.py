@@ -9,39 +9,48 @@ from fixtime.config import load_config
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "configs" / "default.yaml"
+V1_CONFIG = ROOT / "configs" / "v1.yaml"
 
 
-@pytest.fixture
-def real_cfg():
-    cfg = load_config(DEFAULT_CONFIG)
-    if not cfg.dataset_path("W3C", "D6").exists():
+def _real(path, dataset):
+    cfg = load_config(path)
+    if not cfg.dataset_path("W3C", dataset).exists():
         pytest.skip("real datasets not available")
     return cfg
 
 
-def _synthetic_table(rng, n, project=None):
+@pytest.fixture
+def real_cfg():
+    return _real(DEFAULT_CONFIG, "T0")
+
+
+@pytest.fixture
+def real_v1_cfg():
+    return _real(V1_CONFIG, "D6")
+
+
+def _synthetic_table(rng, n):
     x1 = rng.normal(size=n)
     x2 = rng.exponential(size=n)
     y = np.round(np.expm1(np.clip(2 + 1.5 * x1 + 0.5 * x2 + rng.normal(scale=0.5, size=n), 0, None)))
-    df = pd.DataFrame({"bug_id": np.arange(n), "fixing_time": y, "x1": x1, "x2": x2})
-    if project is not None:
-        df["project"] = project
-        df["row_uid"] = [f"{project}:{i}" for i in range(n)]
-    return df
+    return pd.DataFrame({"bug_id": np.arange(n), "fixing_time": y, "x1": x1, "x2": x2})
 
 
 @pytest.fixture
 def synthetic_cfg(tmp_path):
-    """Two tiny projects plus their aggregation, with a config pointing to them."""
+    """Two tiny projects with two snapshots each, and a config pointing to them.
+
+    T0 has every bug; T24 only the bugs with fixing time >= 1 and an extra feature, like
+    the real snapshot datasets. The aggregated scope is built by concatenation.
+    """
     rng = np.random.default_rng(0)
     data = tmp_path / "data"
     data.mkdir()
-    parts = []
     for project, n in [("A", 300), ("B", 200)]:
-        df = _synthetic_table(rng, n, project)
-        df.drop(columns=["project", "row_uid"]).to_csv(data / f"features{project}.csv", index=False)
-        parts.append(df)
-    pd.concat(parts).to_csv(data / "aggregated.csv", index=False)
+        df = _synthetic_table(rng, n)
+        df.to_csv(data / f"{project}_T0.csv", index=False)
+        later = df[df["fixing_time"] >= 1].assign(x3=lambda d: d["x1"] * 2)
+        later.to_csv(data / f"{project}_T24.csv", index=False)
 
     raw = yaml.safe_load(DEFAULT_CONFIG.read_text())
     raw.update(
@@ -50,11 +59,10 @@ def synthetic_cfg(tmp_path):
         run_name="test",
         projects=["A", "B"],
         datasets={
-            "D6": {
-                "project_path": "data/features{project}.csv",
-                "aggregated_path": "data/aggregated.csv",
-            }
+            "T0": {"project_path": "data/{project}_T0.csv"},
+            "T24": {"project_path": "data/{project}_T24.csv"},
         },
+        split_reference="T0",
         n_jobs=1,
     )
     # keep the models small so tests stay fast

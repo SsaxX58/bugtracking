@@ -24,6 +24,7 @@ class Config:
     project_column: str
     drop_columns: list[str]
     datasets: dict[str, dict[str, str]]
+    split_reference: str  # dataset whose ids define the split of each scope
     thresholds: list[int]
     split: dict[str, Any]
     n_jobs: int
@@ -41,13 +42,13 @@ class Config:
     def id_col(self, scope: str) -> str:
         return self.id_column[AGGREGATED if scope == AGGREGATED else "project"]
 
-    def dataset_path(self, scope: str, dataset: str) -> Path:
+    def dataset_path(self, scope: str, dataset: str) -> Path | None:
+        """Path of the CSV, or None for an aggregated scope built by concatenating projects."""
         entry = self.datasets[dataset]
         if scope == AGGREGATED:
-            rel = entry["aggregated_path"]
-        else:
-            rel = entry["project_path"].format(project=scope)
-        return self.base_dir / rel
+            rel = entry.get("aggregated_path")
+            return self.base_dir / rel if rel else None
+        return self.base_dir / entry["project_path"].format(project=scope)
 
 
 def load_config(path: str | Path) -> Config:
@@ -66,6 +67,7 @@ def load_config(path: str | Path) -> Config:
         project_column=raw["project_column"],
         drop_columns=list(raw.get("drop_columns", [])),
         datasets=dict(raw["datasets"]),
+        split_reference=raw.get("split_reference", next(iter(raw["datasets"]))),
         thresholds=[int(p) for p in raw["thresholds"]],
         split=dict(raw["split"]),
         n_jobs=int(raw.get("n_jobs", 1)),

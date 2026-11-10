@@ -1,27 +1,74 @@
-# Pipeline configuration. Paths are relative to `base_dir`, which is relative to this file.
+# V2 configuration: one dataset per time snapshot of each bug.
+# Paths are relative to `base_dir`, which is relative to this file.
 base_dir: ..
 output_dir: outputs
-run_name: v1
+run_name: v2
 seed: 42
 
+# Total fixing time in days (creation to resolution), the same in every snapshot.
 target: fixing_time
 
-# Per-project scopes. The aggregated scope pools all projects into one dataset.
+# Per-project scopes. The aggregated scope pools all projects into one dataset; without an
+# `aggregated_path` it is built by concatenating the project files.
 projects: [Eclipse, Novell, Mozilla, OpenOffice, KDE, OpenXchange, W3C]
 aggregated: true
 id_column:
   project: bug_id
   aggregated: row_uid
 project_column: project
-# Columns that are never used as features (ids and metadata).
-drop_columns: [bug_id, source_row, project, row_uid]
 
-# One entry per dataset D0..D6. `{project}` is replaced with the project name.
-# V2 datasets (D0..D5) will be added here when available, see docs/TODO_dataset_V2.md.
+drop_columns:
+  # ids and metadata
+  - bug_id
+  - project
+  - row_uid
+  - creation_ts
+  # the resolution date and every variant of the target would leak the answer
+  - resolved_date
+  - fixing_time_hours
+  - fixing_time_days
+  - fixing_time_log
+  - residual_fixing_time_hours
+  - residual_fixing_time_days
+  - residual_fixing_time_log
+  # free text and categorical strings (numeric scores such as first_severity_score are kept)
+  - product
+  - component
+  - version
+  - rep_platform
+  - op_sys
+  - first_severity
+  - first_priority
+  - first_severity_status
+  - first_priority_status
+  - reporter
+  - assigned_to
+  - short_desc
+  # the same quantity in another unit: keep only the version in days
+  - time_to_first_comment_hours
+  - time_to_first_comment_log
+  - max_silence_dyn_hours
+  - avg_comment_gap_dyn_hours
+
+# Snapshots of each bug. T1C, T24, T72 and T7D only contain the bugs still open at that time,
+# so they are subsets of T0 (all bugs).
 datasets:
-  D6:
-    project_path: "datasets/V1.0_no time/progetti separati/features{project}.csv"
-    aggregated_path: "datasets/V1.0_no time/progetti aggregati/dataset_aggregato.csv"
+  T0:   # creation: static features only
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_T0.csv"
+  T1C:  # after the first comment
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_T1C.csv"
+  T24:  # 24 hours after creation
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_T24.csv"
+  T72:  # 72 hours after creation
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_T72.csv"
+  T7D:  # 7 days after creation
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_T7D.csv"
+  FULL: # whole history of the bug (upper bound, not usable for real predictions)
+    project_path: "datasets/V2.0_time_Gabriele/Progetti separati/{project}/{project}_FULL.csv"
+
+# The holdout split and CV folds of each scope are computed on this dataset (it must contain
+# every bug) and reused by all the others.
+split_reference: T0
 
 # Percentiles of the target used as fast/slow threshold θ (computed on training data only).
 thresholds: [50, 75, 90]

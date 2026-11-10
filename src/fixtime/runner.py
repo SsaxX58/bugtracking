@@ -192,10 +192,13 @@ def execute_unit(
 
 
 def _positions(ds: Dataset, ids: list) -> np.ndarray:
+    """Row positions of the split ids present in this dataset.
+
+    Snapshot datasets (e.g. bugs still open after 24h) contain only a subset of the
+    reference ids, so ids missing from the dataset are simply skipped.
+    """
     pos = ds.y.index.get_indexer(ids)
-    if (pos < 0).any():
-        raise ValueError(f"{ds.scope}/{ds.name}: split ids not found in dataset")
-    return pos
+    return pos[pos >= 0]
 
 
 def write_manifest(cfg: Config, argv: list[str]) -> Path:
@@ -242,9 +245,22 @@ def run(
     """Run all pending units. Returns the failed units with their tracebacks."""
     failures = []
     for scope in scopes or cfg.scopes:
+        # the split is defined once per scope on the reference dataset, which must contain
+        # every bug; the other datasets of the scope reuse it on their subset of bugs
+        reference = load_dataset(cfg, scope, cfg.split_reference, limit=limit)
+        split = load_or_create_split(cfg, reference)
+        universe = set(split.all_ids)
         for dataset in datasets or list(cfg.datasets):
-            ds = load_dataset(cfg, scope, dataset, limit=limit)
-            split = load_or_create_split(cfg, ds)
+            if dataset == cfg.split_reference:
+                ds = reference
+            else:
+                ds = load_dataset(cfg, scope, dataset, keep_ids=universe if limit else None)
+            outside = set(ds.y.index) - universe
+            if outside:
+                raise ValueError(
+                    f"{scope}/{dataset}: {len(outside)} ids are not in the reference dataset "
+                    f"{cfg.split_reference!r}, e.g. {sorted(outside, key=str)[:3]}"
+                )
             units = enumerate_units(cfg, scope, dataset, split, stages, tasks, models)
             hashes = {u: unit_hash(cfg, u, ds, split) for u in units}
             pending = [

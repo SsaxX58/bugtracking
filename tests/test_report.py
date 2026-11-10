@@ -16,15 +16,16 @@ def test_report_tables(synthetic_cfg):
     results = synthetic_cfg.run_dir / "results"
 
     reg = pd.read_csv(results / "cv_regression_summary.csv")
-    assert len(reg) == 2 * 2  # scopes x regressors
+    assert len(reg) == 2 * 2 * 2  # scopes x datasets x regressors
     assert (reg["n_folds"] == 5).all()
+    reg = reg[reg["dataset"] == "T0"]
     ridge = reg[(reg["scope"] == "A") & (reg["model"] == "ridge")].iloc[0]
     dummy = reg[(reg["scope"] == "A") & (reg["model"] == "dummy")].iloc[0]
     assert ridge["mae_log_mean"] < dummy["mae_log_mean"]
 
     clf = pd.read_csv(results / "cv_classification_summary.csv")
-    assert len(clf) == 2 * 3 * 2 * 2  # scopes x thresholds x balance x classifiers
-    logreg = clf[(clf["model"] == "logreg")]
+    assert len(clf) == 2 * 2 * 3 * 2 * 2  # scopes x datasets x thresholds x balance x models
+    logreg = clf[(clf["model"] == "logreg") & (clf["dataset"] == "T0")]
     assert (logreg["mcc_mean"] > 0).all()
 
     hold = pd.read_csv(results / "holdout_classification.csv")

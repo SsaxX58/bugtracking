@@ -25,6 +25,10 @@ class Split:
     ids_hash: str
 
     @property
+    def all_ids(self) -> list:
+        return self.holdout + self.development
+
+    @property
     def development(self) -> list:
         return [i for fold in self.folds for i in fold]
 
@@ -86,7 +90,7 @@ def split_path(cfg: Config, scope: str) -> Path:
 
 
 def load_or_create_split(cfg: Config, ds: Dataset) -> Split:
-    """Reuse the saved split of the scope; fail loudly if the dataset has different ids."""
+    """Reuse the saved split of the scope; fail loudly if the reference ids have changed."""
     path = split_path(cfg, ds.scope)
     if path.exists():
         data = json.loads(path.read_text())
@@ -94,7 +98,7 @@ def load_or_create_split(cfg: Config, ds: Dataset) -> Split:
         if split.ids_hash != ids_hash(ds.y.index):
             raise ValueError(
                 f"{ds.scope}/{ds.name}: ids differ from the saved split {path}. "
-                "All datasets of a scope must contain the same bugs."
+                "The reference dataset of a scope must not change within a run."
             )
         return split
     split = make_split(cfg, ds)

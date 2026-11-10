@@ -10,7 +10,7 @@ from fixtime.thresholds import compute_theta, make_labels
 
 
 def test_split_partitions_ids(synthetic_cfg):
-    ds = load_dataset(synthetic_cfg, "A", "D6")
+    ds = load_dataset(synthetic_cfg, "A", "T0")
     split = make_split(synthetic_cfg, ds)
     all_ids = split.holdout + split.development
     assert sorted(all_ids) == sorted(ds.y.index)
@@ -20,7 +20,7 @@ def test_split_partitions_ids(synthetic_cfg):
 
 
 def test_train_test_are_disjoint(synthetic_cfg):
-    ds = load_dataset(synthetic_cfg, "A", "D6")
+    ds = load_dataset(synthetic_cfg, "A", "T0")
     split = make_split(synthetic_cfg, ds)
     for fold in split.fold_names:
         train, test = split.train_test(fold)
@@ -31,12 +31,12 @@ def test_train_test_are_disjoint(synthetic_cfg):
 
 
 def test_split_is_reproducible(synthetic_cfg):
-    ds = load_dataset(synthetic_cfg, "A", "D6")
+    ds = load_dataset(synthetic_cfg, "A", "T0")
     assert make_split(synthetic_cfg, ds).to_json() == make_split(synthetic_cfg, ds).to_json()
 
 
 def test_aggregated_split_is_stratified_by_project(synthetic_cfg):
-    ds = load_dataset(synthetic_cfg, AGGREGATED, "D6")
+    ds = load_dataset(synthetic_cfg, AGGREGATED, "T0")
     split = make_split(synthetic_cfg, ds)
     share = ds.project.loc[split.holdout].value_counts(normalize=True)
     overall = ds.project.value_counts(normalize=True)
@@ -44,7 +44,7 @@ def test_aggregated_split_is_stratified_by_project(synthetic_cfg):
 
 
 def test_saved_split_is_reused_and_checked(synthetic_cfg):
-    ds = load_dataset(synthetic_cfg, "A", "D6")
+    ds = load_dataset(synthetic_cfg, "A", "T0")
     first = load_or_create_split(synthetic_cfg, ds)
     assert split_path(synthetic_cfg, "A").exists()
     assert load_or_create_split(synthetic_cfg, ds).to_json() == first.to_json()
