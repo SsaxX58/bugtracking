@@ -34,6 +34,7 @@ uv run fixtime run --stage holdout --model lightgbm  # solo una fase / un modell
 uv run fixtime run --limit 500                       # smoke test su un sottocampione (run separato)
 uv run fixtime report                                # tabelle CSV in outputs/<run>/results/
 uv run pytest                                        # test
+uv run mypy src                                      # controllo statico dei tipi (strict)
 ```
 
 Ogni fit (scope, dataset, fold, task, modello, θ, bilanciamento) è un'unità indipendente.
@@ -41,6 +42,21 @@ Un'unità già calcolata viene saltata, a meno di `--force`. Viene invece ricalc
 se cambia qualcosa che la influenza: iperparametri, file di dati, split, seed oppure
 `PIPELINE_VERSION` in `src/fixtime/runner.py`. Per rifare un singolo pezzo basta cancellarne
 il file `.json`.
+
+## Tipi e validazione
+
+Tutte le strutture di dati sono modelli [pydantic](https://docs.pydantic.dev/):
+
+- `config.py`: `Config` e le sue sezioni, con gli iperparametri tipizzati per ogni modello.
+  Il YAML viene validato al caricamento: chiavi sconosciute, iperparametri scritti male o
+  valori fuori scala sono errori e il run non parte.
+- `data.py`: `Dataset` (feature, target e id in memoria).
+- `splits.py`: `Split` (`splits/<scope>.json`).
+- `metrics.py`: `RegressionMetrics`, `ClassificationMetrics`.
+- `records.py`: `Unit`, `RegressionResult`, `ClassificationResult` (i `.json` di ogni unità)
+  e `Manifest`. `UNIT_RESULT.validate_json(...)` rilegge un risultato con il tipo giusto.
+
+Il pacchetto passa `mypy --strict` (configurazione in `pyproject.toml`).
 
 ## Metodo
 
