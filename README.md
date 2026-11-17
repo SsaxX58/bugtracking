@@ -1,4 +1,4 @@
-# fixtime
+# bugtracking
 
 Pipeline per stimare il tempo di fix dei bug (`fixing_time`, in giorni) a partire da feature
 tabulari estratte dai bug tracker di 7 progetti open source.
