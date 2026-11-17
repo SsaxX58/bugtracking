@@ -72,10 +72,10 @@ poi lettura dei CSV in `outputs/<run>/results/`.
 
 ### 3.1 Versioni
 
-| Versione | Cartella | Config | Run | Contenuto |
-|---|---|---|---|---|
-| **V2** (predefinita) | `datasets/V2.0_time_Gabriele/Progetti separati/<P>/<P>_<snapshot>.csv` | `configs/default.yaml` | `outputs/v2` | 7 progetti × 6 snapshot temporali; nessun aggregato fornito, lo costruisce il codice |
-| **V1** | `datasets/V1.0_no time/` | `configs/v1.yaml` | `outputs/v1` | un solo dataset per progetto con tutte le feature (equivalente a FULL di V2) più un file aggregato |
+| Versione             | Cartella                                                               | Config                 | Run          | Contenuto                                                                                          |
+| -------------------- | ---------------------------------------------------------------------- | ---------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| **V2** (predefinita) | `datasets/V2.0_time_Gabriele/Progetti separati/<P>/<P>_<snapshot>.csv` | `configs/default.yaml` | `outputs/v2` | 7 progetti × 6 snapshot temporali; nessun aggregato fornito, lo costruisce il codice               |
+| **V1**               | `datasets/V1.0_no time/`                                               | `configs/v1.yaml`      | `outputs/v1` | un solo dataset per progetto con tutte le feature (equivalente a FULL di V2) più un file aggregato |
 
 Progetti: Eclipse, Novell, Mozilla, OpenOffice, KDE, OpenXchange, W3C.
 
@@ -83,16 +83,17 @@ Progetti: Eclipse, Novell, Mozilla, OpenOffice, KDE, OpenXchange, W3C.
 
 Ogni snapshot descrive i bug con le sole informazioni disponibili in un certo momento.
 
-| Dataset | Momento | Feature | Quali bug contiene |
-|---|---|---|---|
-| `T0` | apertura del bug | 28 (solo statiche: testo della descrizione, gravità e priorità iniziali, esperienza del reporter) | tutti |
-| `T1C` | primo commento | 32 (T0 + primo commento e il suo tempo) | solo i bug ancora aperti al primo commento |
-| `T24` | 24 ore dopo l'apertura | 38 (T0 + 10 feature dinamiche sui commenti) | solo i bug ancora aperti dopo 24 ore |
-| `T72` | 72 ore | 38 | solo quelli ancora aperti dopo 72 ore |
-| `T7D` | 7 giorni | 38 | solo quelli ancora aperti dopo 7 giorni |
-| `FULL` | tutta la vita del bug | 45 | tutti |
+| Dataset | Momento                | Feature                                                                                           | Quali bug contiene                         |
+| ------- | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `T0`    | apertura del bug       | 28 (solo statiche: testo della descrizione, gravità e priorità iniziali, esperienza del reporter) | tutti                                      |
+| `T1C`   | primo commento         | 32 (T0 + primo commento e il suo tempo)                                                           | solo i bug ancora aperti al primo commento |
+| `T24`   | 24 ore dopo l'apertura | 38 (T0 + 10 feature dinamiche sui commenti)                                                       | solo i bug ancora aperti dopo 24 ore       |
+| `T72`   | 72 ore                 | 38                                                                                                | solo quelli ancora aperti dopo 72 ore      |
+| `T7D`   | 7 giorni               | 38                                                                                                | solo quelli ancora aperti dopo 7 giorni    |
+| `FULL`  | tutta la vita del bug  | 45                                                                                                | tutti                                      |
 
 Conseguenze importanti:
+
 - T1C, T24, T72 e T7D sono **sottoinsiemi** di T0. Per questo lo split si calcola su T0 e
   viene riusato da tutti (vedi [Split](#42-split)).
 - Il target `fixing_time` è il **tempo totale** dall'apertura alla risoluzione, identico in
@@ -128,7 +129,7 @@ Basta una voce sotto `datasets:` nella config:
 datasets:
   T14D:
     project_path: "datasets/.../{project}/{project}_T14D.csv"
-    aggregated_path: "datasets/.../T14D_aggregato.csv"   # facoltativo
+    aggregated_path: "datasets/.../T14D_aggregato.csv" # facoltativo
 ```
 
 Ogni bug del nuovo dataset deve esistere nel dataset `split_reference` (T0), altrimenti la
@@ -192,13 +193,13 @@ fixtime report ──► raccoglie tutti i JSON in tabelle CSV
 Ogni modello è una `sklearn.Pipeline`: imputazione a mediana, standardizzazione (solo modelli
 lineari), modello.
 
-| Nome in config | Regressione | Classificazione |
-|---|---|---|
-| `dummy` | mediana del train | classe a priori (riferimento: MCC 0) |
-| `ridge` / `logreg` | Ridge | Logistic Regression |
-| `random_forest` | Random Forest | Random Forest |
-| `xgboost` | XGBoost | XGBoost |
-| `lightgbm` | LightGBM | LightGBM |
+| Nome in config     | Regressione       | Classificazione                      |
+| ------------------ | ----------------- | ------------------------------------ |
+| `dummy`            | mediana del train | classe a priori (riferimento: MCC 0) |
+| `ridge` / `logreg` | Ridge             | Logistic Regression                  |
+| `random_forest`    | Random Forest     | Random Forest                        |
+| `xgboost`          | XGBoost           | XGBoost                              |
+| `lightgbm`         | LightGBM          | LightGBM                             |
 
 Iperparametri fissi in config (nessuna ricerca automatica). Ogni modello usa un solo thread:
 il parallelismo è tra unità (vedi [4.8](#48-parallelismo)).
@@ -340,16 +341,17 @@ ricalcolare dalle predizioni senza riaddestrare.
 
 `uv run fixtime report` legge tutti i JSON del run e scrive:
 
-| File | Contenuto |
-|---|---|
-| `cv_*_folds.csv` | una riga per unità di CV (ogni fold) con tutte le metriche |
+| File               | Contenuto                                                                  |
+| ------------------ | -------------------------------------------------------------------------- |
+| `cv_*_folds.csv`   | una riga per unità di CV (ogni fold) con tutte le metriche                 |
 | `cv_*_summary.csv` | media e deviazione standard sui 5 fold (`<metrica>_mean`, `<metrica>_std`) |
-| `holdout_*.csv` | una riga per modello sull'holdout |
+| `holdout_*.csv`    | una riga per modello sull'holdout                                          |
 
 Chiavi delle righe: `scope`, `dataset`, `model`, più `theta_percentile` e `balanced` per la
 classificazione.
 
 Indicazioni di lettura:
+
 - Metriche principali: **MCC** e **PR-AUC** per la classificazione (il caso vale 0 e la
   quota di slow), **MAE_log** e il suo confronto con `dummy` per la regressione.
 - Guardare sempre la deviazione standard tra i fold: nei progetti piccoli (OpenXchange, W3C,
@@ -452,21 +454,21 @@ Le config sono in `configs/` (`default.yaml` = V2, `v1.yaml` = V1) e vengono val
 caricamento: chiavi sconosciute, iperparametri scritti male o valori fuori scala sono errori
 e il run non parte.
 
-| Chiave | Significato |
-|---|---|
-| `base_dir`, `output_dir`, `run_name` | percorsi; i risultati vanno in `<output_dir>/<run_name>` |
-| `seed` | seed di split e modelli (42) |
-| `target` | colonna del target (`fixing_time`) |
-| `projects`, `aggregated` | progetti e se includere lo scope aggregato |
-| `id_column.project`, `id_column.aggregated`, `project_column` | colonne di id e di progetto |
-| `drop_columns` | colonne da non usare come feature |
-| `datasets.<nome>.project_path` | percorso per progetto, con `{project}` come segnaposto |
-| `datasets.<nome>.aggregated_path` | facoltativo: file aggregato già pronto |
-| `split_reference` | dataset su cui si calcola lo split (predefinito: il primo) |
-| `split.holdout_size`, `split.n_folds`, `split.n_bins` | 0.2, 5, 10 |
-| `thresholds` | percentili delle soglie θ (`[50, 75, 90]`) |
-| `n_jobs` | unità in parallelo (`-1` = tutti i core) |
-| `models.regression.<nome>`, `models.classification.<nome>` | modelli attivi e loro iperparametri |
+| Chiave                                                        | Significato                                                |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `base_dir`, `output_dir`, `run_name`                          | percorsi; i risultati vanno in `<output_dir>/<run_name>`   |
+| `seed`                                                        | seed di split e modelli (42)                               |
+| `target`                                                      | colonna del target (`fixing_time`)                         |
+| `projects`, `aggregated`                                      | progetti e se includere lo scope aggregato                 |
+| `id_column.project`, `id_column.aggregated`, `project_column` | colonne di id e di progetto                                |
+| `drop_columns`                                                | colonne da non usare come feature                          |
+| `datasets.<nome>.project_path`                                | percorso per progetto, con `{project}` come segnaposto     |
+| `datasets.<nome>.aggregated_path`                             | facoltativo: file aggregato già pronto                     |
+| `split_reference`                                             | dataset su cui si calcola lo split (predefinito: il primo) |
+| `split.holdout_size`, `split.n_folds`, `split.n_bins`         | 0.2, 5, 10                                                 |
+| `thresholds`                                                  | percentili delle soglie θ (`[50, 75, 90]`)                 |
+| `n_jobs`                                                      | unità in parallelo (`-1` = tutti i core)                   |
+| `models.regression.<nome>`, `models.classification.<nome>`    | modelli attivi e loro iperparametri                        |
 
 Un modello è attivo se la sua chiave è presente sotto `models`. Gli iperparametri non scritti
 restano al valore predefinito della libreria. Cambiare un iperparametro invalida solo le unità
@@ -506,23 +508,13 @@ giusto (regressione o classificazione). Il pacchetto passa `mypy --strict` (conf
 
 ## 12. Cosa manca e limiti noti
 
-**Fuori scopo di questa pipeline**
+**Da aggiungere**
+
 - **SHAP**: analisi di spiegabilità sui modelli dell'holdout, a valle. L'interfaccia è
   descritta in [Interfaccia per SHAP](#8-interfaccia-per-shap).
 
-**Non ancora implementato**
-- **Split temporale**: oggi holdout e fold sono casuali (stratificati), quindi train e test
-  appartengono allo stesso periodo. Una valutazione "addestra sul passato, valuta sul futuro"
-  sarebbe più vicina all'uso reale.
-- **Bilanciamento dei progetti nell'aggregato**: oggi ogni progetto pesa per il numero dei
-  suoi bug (vedi [5.3](#53-soglie-e-peso-dei-progetti)).
-- **Aggregato V2 ufficiale**: quando arriverà, va confrontato con quello costruito per
-  concatenazione.
-- **Esportazione dell'aggregato V2** in CSV: oggi esiste solo in memoria.
-- **Tempo residuo come target** negli snapshot (oggi è il tempo totale).
-- **Ricerca degli iperparametri**: iperparametri fissi in config.
-
 **Problemi noti del codice**
+
 1. Cambiare seed o impostazioni dello split mantenendo lo stesso `run_name` non rifà lo split:
    le unità vengono ricalcolate, ma sul vecchio `splits/<scope>.json`. Per ora: chi cambia lo
    split usa un nuovo `run_name`.
@@ -530,9 +522,3 @@ giusto (regressione o classificazione). Il pacchetto passa `mypy --strict` (conf
    soglie tolti dalla config o non ancora ricalcolati dopo una modifica.
 3. Un id modificato o cancellato a mano in `splits/<scope>.json` verrebbe ignorato senza
    errore (quel bug sparirebbe dai fold).
-
-**Assunzioni da confermare**
-- 7 progetti nei dati (lo schema iniziale ne prevedeva 6).
-- Target = tempo totale anche negli snapshot; θ ricalcolato per ogni snapshot.
-- Le feature di T0 calcolate dal titolo (`summary_words`, `title_description_overlap`,
-  `description_summary_ratio`) potrebbero usare il titolo finale invece di quello iniziale.
